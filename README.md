@@ -1,3 +1,5 @@
+![Murk](.github/banner.jpg)
+
 # Murk
 
 Stealth payments on BNB Smart Chain. Every payment goes to a fresh one-time address that only the receiver can link to themselves and spend from.
