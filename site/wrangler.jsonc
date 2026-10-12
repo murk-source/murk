@@ -1,0 +1,20 @@
+{
+  "name": "murk",
+  "compatibility_date": "2026-09-01",
+  // The static site (public/) and /api/* (announcements index, totals, handle lookup).
+  "main": "worker/index.js",
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "murkfi.xyz", "custom_domain": true },
+    { "pattern": "www.murkfi.xyz", "custom_domain": true }
+  ],
+  // publicnode serves logs for recent blocks only; 48.club and bloXroute keep history (5000 blocks per query)
+  "vars": { "RPC": "https://bsc-rpc.publicnode.com,https://rpc-bsc.48.club,https://bsc.rpc.blxrbdn.com", "CHUNK": "5000", "CHUNKS": "10" },
+  "kv_namespaces": [{ "binding": "KV", "id": "e7807031c084492ba08b96b05d16ee61" }],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "run_worker_first": ["/api/*", "/pay/*"]
+  }
+}
