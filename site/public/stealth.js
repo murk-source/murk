@@ -8,7 +8,7 @@
 // Receiving: shared = v * R, same h, stealth private key = (s + h) mod n.
 import { secp256k1 } from "https://esm.sh/@noble/curves@1.6.0/secp256k1";
 import { keccak_256 } from "https://esm.sh/@noble/hashes@1.5.0/sha3";
-import { createPublicClient, createWalletClient, custom, http, parseAbi, encodeFunctionData, formatUnits, parseUnits, toHex, hexToBytes, bytesToHex, getAddress } from "https://esm.sh/viem@2.21.45";
+import { createPublicClient, createWalletClient, custom, http, fallback, parseAbi, encodeFunctionData, formatUnits, parseUnits, toHex, hexToBytes, bytesToHex, getAddress } from "https://esm.sh/viem@2.21.45";
 import { privateKeyToAccount } from "https://esm.sh/viem@2.21.45/accounts";
 
 const N = secp256k1.CURVE.n;
@@ -70,7 +70,8 @@ export const ABI = parseAbi([
 
 export function makeChain(cfg) {
   const chain = { id: cfg.chainId, name: cfg.chainName, nativeCurrency: { name: cfg.native, symbol: cfg.native, decimals: 18 }, rpcUrls: { default: { http: [cfg.rpc] } }, blockExplorers: { default: { name: "Explorer", url: cfg.explorer } } };
-  const pub = createPublicClient({ chain, transport: http(cfg.rpc) });
+  // several public endpoints: if one errors or rate-limits, the next one answers
+  const pub = createPublicClient({ chain, transport: fallback((cfg.rpcs || [cfg.rpc]).map((u) => http(u))) });
   let provider = null, address = "";
   const W = {
     chain, pub,
@@ -126,6 +127,8 @@ export async function pay(W, cfg, contract, meta, token, amountText, onStep = ()
   let hash;
   if (!token.address) {
     const value = parseUnits(String(amountText), 18);
+    const [bal, gas, price] = await Promise.all([W.pub.getBalance({ address: W.address }), W.pub.estimateContractGas({ address: contract, abi: ABI, functionName: "payNative", args: [s.address, s.ephemeral, s.viewTag], value, account: W.address }).catch(() => 80000n), W.pub.getGasPrice()]);
+    if (bal < value + (gas * price * 12n) / 10n) throw new Error("Not enough " + cfg.native + " for the amount plus gas");
     onStep("Confirm the payment in your wallet");
     hash = await wc.writeContract({ address: contract, abi: ABI, functionName: "payNative", args: [s.address, s.ephemeral, s.viewTag], value });
   } else {
@@ -146,6 +149,7 @@ export async function pay(W, cfg, contract, meta, token, amountText, onStep = ()
 }
 
 /** announcements that belong to these keys, with what each one-time address still holds */
+const isNative = (cfg, token) => token.toLowerCase() === cfg.nativeMarker.toLowerCase();
 export async function inbox(W, cfg, keys, anns) {
   const mine = [];
   for (const a of anns) {
@@ -154,7 +158,7 @@ export async function inbox(W, cfg, keys, anns) {
   }
   await Promise.all(mine.map(async (m) => {
     m.native = await W.pub.getBalance({ address: m.stealth }).catch(() => 0n);
-    m.held = m.token === cfg.nativeMarker ? m.native : await W.pub.readContract({ address: m.token, abi: ABI, functionName: "balanceOf", args: [m.stealth] }).catch(() => 0n);
+    m.held = isNative(cfg, m.token) ? m.native : await W.pub.readContract({ address: m.token, abi: ABI, functionName: "balanceOf", args: [m.stealth] }).catch(() => 0n);
   }));
   return mine;
 }
@@ -162,10 +166,10 @@ export async function inbox(W, cfg, keys, anns) {
 /** moves what a one-time address holds to `to`, signed with its own key (gas comes from its own native balance) */
 export async function collect(W, cfg, m, to) {
   const acct = privateKeyToAccount(m.key);
-  const wc = createWalletClient({ account: acct, chain: W.chain, transport: http(cfg.rpc) });
+  const wc = createWalletClient({ account: acct, chain: W.chain, transport: fallback((cfg.rpcs || [cfg.rpc]).map((u) => http(u))) });
   const gasPrice = (await W.pub.getGasPrice()) * 12n / 10n;
   const hashes = [];
-  if (m.token !== cfg.nativeMarker && m.held > 0n) {
+  if (!isNative(cfg, m.token) && m.held > 0n) {
     const data = encodeFunctionData({ abi: ABI, functionName: "transfer", args: [to, m.held] });
     const gas = await W.pub.estimateGas({ account: acct.address, to: m.token, data }).catch(() => 70000n);
     if (m.native < gas * gasPrice) throw new Error("This payment has no " + cfg.native + " for gas. Top it up with " + cfg.gasTip + " " + cfg.native + " first.");

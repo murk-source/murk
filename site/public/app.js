@@ -9,7 +9,18 @@ const S = { dep: null, keys: null, tok: CFG.tokens[0], who: null, anns: null, mi
 const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
 const fmt = (v, d = 4) => (Number(v) || 0).toLocaleString("en-US", { maximumFractionDigits: d });
 const toast = (m, bad) => { const t = $("#toast"); t.textContent = m; t.className = "toast show" + (bad ? " bad" : ""); clearTimeout(t._h); t._h = setTimeout(() => (t.className = "toast"), 4500); };
-const errText = (e) => { const m = e?.shortMessage || e?.message || String(e); return /reject|denied|cancel/i.test(m) ? "Cancelled in the wallet" : m.slice(0, 180); };
+const errText = (e) => {
+  const m = [e?.shortMessage, e?.details, e?.cause?.shortMessage, e?.message].filter(Boolean).join(" · ") || String(e);
+  if (/reject|denied|cancel/i.test(m)) return "Cancelled in the wallet";
+  if (/insufficient funds|exceeds balance/i.test(m)) return "Not enough " + CFG.native + " for this transaction and its gas";
+  return (e?.details && !/unknown rpc/i.test(e.details) ? e.details : e?.shortMessage || e?.message || String(e)).slice(0, 180);
+};
+/** checks a contract call against the chain before the wallet opens: a clear reason instead of the wallet's "unknown RPC error" */
+async function precheck(call, value = 0n) {
+  const gas = await W.pub.estimateContractGas({ ...call, account: W.address, value }).catch((e) => { throw new Error(e?.shortMessage?.includes("reverted") ? "The contract rejects this: " + (e.metaMessages?.[0] || e.shortMessage) : errText(e)); });
+  const [bal, price] = await Promise.all([W.pub.getBalance({ address: W.address }), W.pub.getGasPrice()]);
+  if (bal < value + (gas * price * 12n) / 10n) throw new Error("Not enough " + CFG.native + " for gas on " + W.address.slice(0, 6) + "…" + W.address.slice(-4) + ": top it up with a little " + CFG.native);
+}
 const tokenOf = (addr) => CFG.tokens.find((t) => (t.address || CFG.nativeMarker).toLowerCase() === addr.toLowerCase()) || { symbol: short(addr), decimals: 18 };
 const icon = (t) => (t.logo ? '<img class="tk-ic" src="' + t.logo + '" alt="">' : '<span class="tk-ic" style="--c:' + (t.color || "#8892a6") + '">' + t.symbol.slice(0, 1) + "</span>");
 
@@ -77,11 +88,11 @@ async function resolveTo() {
 let rt; $("#payTo").addEventListener("input", () => { clearTimeout(rt); rt = setTimeout(resolveTo, 350); });
 function drawTokens() {
   $("#payTokens").innerHTML = CFG.tokens.map((t, i) => '<button class="chip' + (t === S.tok ? " on" : "") + '" data-i="' + i + '">' + icon(t) + t.symbol + "</button>").join("");
-  $("#payTokens").querySelectorAll(".chip").forEach((b) => (b.onclick = () => { S.tok = CFG.tokens[+b.dataset.i]; drawTokens(); balances(); drawPay(); }));
+  $("#payTokens").querySelectorAll(".chip").forEach((b) => (b.onclick = () => { S.tok = CFG.tokens[+b.dataset.i]; $("#payTokens").classList.remove("open"); drawTokens(); balances(); drawPay(); }));
 }
 function drawPay() {
   const t = S.tok, amt = Number($("#payAmt").value);
-  $("#payUnit").textContent = t.symbol;
+  $("#payUnit").innerHTML = icon(t) + t.symbol + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
   $("#payBal").textContent = W.address ? (S.bal[t.symbol] != null ? "Balance " + fmt(S.bal[t.symbol]) + " " + t.symbol : "Balance …") : "";
   $("#payWho").className = "who" + (S.who?.err ? " bad" : S.who ? " ok" : "");
   $("#payWho").textContent = S.who?.err || (S.who ? "Paying " + S.who.label + " · a fresh one-time address is made for this payment" : "");
@@ -91,6 +102,9 @@ function drawPay() {
   b.textContent = !S.dep ? "Opens at launch" : !W.address ? "Connect wallet" : !S.who?.meta ? "Who are you paying?" : !(amt > 0) ? "Enter an amount" : "Pay " + fmt(amt) + " " + t.symbol + " privately";
 }
 $("#payAmt").addEventListener("input", drawPay);
+// token picker: the pill next to the amount opens the full list
+$("#payUnit").onclick = (e) => { e.stopPropagation(); $("#payTokens").classList.toggle("open"); };
+document.addEventListener("click", (e) => { if (!e.target.closest("#payTokens")) $("#payTokens").classList.remove("open"); });
 $("#payMax").onclick = () => { const b = S.bal[S.tok.symbol]; if (b) { $("#payAmt").value = String(S.tok.address ? b : Math.max(0, b - 0.0005)); drawPay(); } };
 $("#payBtn").onclick = async () => {
   if (!W.address) return pickWallet();
@@ -129,12 +143,20 @@ $("#rcvClaim").onclick = async () => {
     if (!r) throw new Error("Could not check the name, try again");
     if (r.owner && r.owner.toLowerCase() !== W.address.toLowerCase()) throw new Error("@" + name + " is taken");
     const wc = await W.onChain();
+    await precheck({ address: S.dep.stealthPay, abi: ABI, functionName: "setName", args: [name, k.meta] });
     const h = await wc.writeContract({ address: S.dep.stealthPay, abi: ABI, functionName: "setName", args: [name, k.meta] });
     b.textContent = "Waiting for the block…";
     await W.pub.waitForTransactionReceipt({ hash: h });
     S.myName = name; try { localStorage.setItem(CFG.app + ":name:" + W.address.toLowerCase(), name); } catch {}
     toast("@" + name + " is yours"); drawReceive();
-  } catch (e) { toast(errText(e), true); }
+  } catch (e) {
+    // the transaction may have landed even if waiting for it failed
+    const r = await lookupName(name).catch(() => null);
+    if (r?.owner && W.address && r.owner.toLowerCase() === W.address.toLowerCase() && r.meta?.toLowerCase() === S.keys?.meta?.toLowerCase()) {
+      S.myName = name; try { localStorage.setItem(CFG.app + ":name:" + W.address.toLowerCase(), name); } catch {}
+      toast("@" + name + " is yours"); drawReceive();
+    } else toast(errText(e), true);
+  }
   b.disabled = false; b.textContent = "Claim name";
 };
 
@@ -171,7 +193,12 @@ $("#inCollect").onclick = async () => {
   let n = 0;
   for (const m of S.mine.filter((x) => x.held > 0n)) {
     $("#inState").textContent = "Collecting " + short(m.stealth) + "…";
-    try { await collect(W, CFG, m, to); n++; } catch (e) { toast(errText(e), true); }
+    try { await collect(W, CFG, m, to); n++; }
+    catch (e) {
+      // the transfer can land even when the node's reply is lost: an emptied one-time address counts as collected
+      const left = await W.pub.getBalance({ address: m.stealth }).catch(() => null);
+      if (left != null && left < 21000n * (await W.pub.getGasPrice().catch(() => 0n)) * 2n) n++; else toast(errText(e), true);
+    }
   }
   S.busy = false;
   toast(n ? "Collected " + n + " payment" + (n > 1 ? "s" : "") : "Nothing collected", !n);
@@ -187,6 +214,8 @@ function drawAll() { drawWallet(); drawPay(); drawReceive(); drawInbox(); }
   drawTokens(); drawAll();
   await W.reconnect();
   try { S.myName = localStorage.getItem(CFG.app + ":name:" + (W.address || "").toLowerCase()) || ""; } catch {}
+  const qn = new URLSearchParams(location.search).get("name"); // from the landing page name check
+  if (qn && /^[a-z0-9_]{3,20}$/.test(qn)) $("#rcvName").value = qn;
   const m = location.pathname.match(/^\/pay\/([a-z0-9_]{3,20})/);
   if (m) { $("#payTo").value = m[1]; resolveTo(); tab("pay"); }
   else tab(location.hash === "#inbox" ? "inbox" : location.hash === "#receive" ? "receive" : "pay");

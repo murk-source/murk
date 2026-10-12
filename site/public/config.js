@@ -8,6 +8,7 @@ window.CFG = {
   chainName: "BNB Smart Chain",
   native: "BNB",
   rpc: "https://bsc-rpc.publicnode.com",
+  rpcs: ["https://bsc-rpc.publicnode.com", "https://bsc-dataseed.bnbchain.org", "https://rpc-bsc.48.club"],
   explorer: "https://bscscan.com",
   nativeMarker: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
   gasTip: "0.00003",
