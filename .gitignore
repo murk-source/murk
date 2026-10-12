@@ -14,3 +14,7 @@ node_modules/
 # brand and post assets (not part of the app)
 brand/
 publish/
+
+# local mainnet deploy helper
+deploy/
+deploy-mainnet.bat

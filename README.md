@@ -36,7 +36,6 @@ Deployed on BNB Smart Chain (chain id 56): [`0x61c048e61b6ab40806878a457B7c95f83
 ```
 contracts/   Foundry project: StealthPay, tests, deploy script
 site/        Cloudflare Worker: static site (public/) and /api/* (announcement index, totals, name lookup)
-deploy/      one-step mainnet deploy (deploy.mjs, net.json)
 ```
 
 The pages are plain ES modules with no build step. Curve math comes from `@noble/curves` and chain calls from `viem`.
@@ -54,7 +53,7 @@ cd site
 npx wrangler dev
 ```
 
-Deploy (contract, then the site): `node deploy/deploy.mjs`. It asks for the deployer key in a hidden prompt, runs the tests and a dry run, and broadcasts only after you type `DEPLOY`.
+Deploy the contract with `forge script script/Deploy.s.sol --rpc-url <rpc> --broadcast`, put its address and deploy block in `site/public/deployment.json` (`{ "stealthPay": "0x…", "block": 123 }`), then `npx wrangler deploy` in `site/`.
 
 ## Notes
 
