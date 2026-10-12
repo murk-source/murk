@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Murk docs</title>
+<meta property="og:image" content="https://murkfi.xyz/og.png">
+<link rel="icon" href="/icon.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/"><img src="/icon.png" alt="">Murk</a>
+  <nav><a href="/">Home</a></nav>
+  <a class="btn btn-acc" href="/app/">Open app</a>
+</div></header>
+<main><div class="wrap"><div class="docs">
+<h1>Docs</h1>
+<p>Murk is a stealth payment app on BNB Smart Chain. A receiver publishes one link; every payment to it lands on a new one-time address that only the receiver can identify and spend. It follows ERC-5564 (scheme 1: secp256k1 with view tags).</p>
+
+<h2>Keys</h2>
+<ul>
+<li>Your wallet signs a fixed message. The 65-byte signature is split and hashed (keccak-256) into a spending key <code>s</code> and a viewing key <code>v</code>.</li>
+<li>The meta-address is the two compressed public keys <code>S = s·G</code>, <code>V = v·G</code> (66 bytes), shown as <code>st:bnb:0x…</code>.</li>
+<li>Keys exist only in the open browser tab. Signing the same message again, on any device, gives the same keys.</li>
+</ul>
+
+<h2>Paying</h2>
+<ul>
+<li>The payer's browser picks a random <code>r</code>, computes <code>R = r·G</code>, the shared secret <code>r·V</code> and <code>h = keccak(r·V)</code>.</li>
+<li>The one-time address is the address of <code>S + h·G</code>. The view tag is the first byte of <code>h</code>.</li>
+<li><code>StealthPay.payNative</code> or <code>payToken</code> moves the money straight to that address and emits an <code>Announcement</code> with <code>R</code>, the view tag, token and amount.</li>
+<li>Token payments carry 0.00003 BNB to the same address so it can pay gas when the receiver collects.</li>
+</ul>
+
+<h2>Receiving</h2>
+<ul>
+<li>The inbox reads every announcement and, for each, computes <code>v·R</code>. A wrong view tag is skipped after one multiplication.</li>
+<li>For a match, the private key of the one-time address is <code>(s + h) mod n</code>. It is checked against the address before use.</li>
+<li>Collect signs a transfer from each one-time address with its own key, to any address you enter. A fresh address keeps the link between payments and your main wallet hidden.</li>
+</ul>
+
+<h2>Names</h2>
+<p><code>setName(name, meta)</code> stores a meta-address under a name (3-20 chars, a-z 0-9 _). First come; only the owner can update it. <code>/pay/&lt;name&gt;</code> links resolve it.</p>
+
+<h2>Contract</h2>
+<table>
+<tr><td>StealthPay</td><td id="addr">deploys at launch</td></tr>
+<tr><td>Chain</td><td>BNB Smart Chain (56)</td></tr>
+<tr><td>Owner / admin</td><td>none</td></tr>
+<tr><td>Fee</td><td>none</td></tr>
+<tr><td>Funds held</td><td>none, every call forwards in full</td></tr>
+</table>
+
+<h2>Limits and risks</h2>
+<ul>
+<li>Unaudited. The contract is about 100 lines, no owner and no upgrade.</li>
+<li>Amounts and timing are public. Paying an unusual amount at a known time can still be matched by an observer.</li>
+<li>If you lose access to the wallet that signs the key message, you lose access to your payments.</li>
+<li>The page asks the worker only for public announcements; your keys and matches never leave the browser.</li>
+</ul>
+</div></div></main>
+<footer><div class="wrap"><div><a class="brand" href="/"><img src="/icon.png" alt="">Murk</a></div><div class="cols"><div class="col"><b>Product</b><a href="/app/">App</a></div><div class="col"><b>Community</b><a href="https://x.com/murkfi" target="_blank" rel="noopener">X</a></div></div></div></footer>
+<script>
+fetch("/deployment.json",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(d&&d.stealthPay){const a=document.getElementById("addr");a.innerHTML='<a href="https://bscscan.com/address/'+d.stealthPay+'" target="_blank" rel="noopener">'+d.stealthPay+"</a>";}}).catch(()=>{});
+</script>
+</body>
+</html>

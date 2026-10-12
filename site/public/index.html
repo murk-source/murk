@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Murk · private payments on BNB Chain</title>
+<meta name="description" content="Stealth payments for BNB, USDT, USDC, USD1 and FDUSD on BNB Chain. Each payment lands on a one-time address only the receiver can find.">
+<meta property="og:title" content="Murk">
+<meta property="og:description" content="Pay and get paid in BNB and stablecoins without exposing your wallet. Stealth addresses, ERC-5564.">
+<meta property="og:image" content="https://murkfi.xyz/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/icon.png">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="/"><img src="/icon.png" alt="">Murk</a>
+  <nav><a href="#vs">Why</a><a href="#process">Process</a><a href="#assets">Assets</a><a href="/docs">Docs</a></nav>
+  <div class="right"><a class="btn btn-acc" href="/app/">Launch app</a></div>
+</div></header>
+
+<main>
+<div class="wrap">
+  <div class="hero">
+    <h1><span>Pay into</span><span>the murk</span><span>and vanish</span></h1>
+    <div class="copy">
+      <p>Stealth payments for BNB and stablecoins on BNB Chain. Share one handle, receive on addresses nobody can tie to you, collect when you want.</p>
+      <div class="cta"><a class="btn btn-acc" href="/app/#receive">Get a handle</a><a class="btn btn-ghost" href="/app/">Send privately</a></div>
+      <div id="caBox"></div>
+    </div>
+    <div class="term" aria-label="Announcements">
+      <div class="bar"><span>Announcements on chain</span><b id="termState">demo stream</b></div>
+      <div class="body" id="term"></div>
+    </div>
+  </div>
+  <div class="nums">
+    <div><small>Private payments so far</small><b id="stPay">0</b></div>
+    <div><small>Handles</small><b id="stNames">0</b></div>
+    <div><small>Assets</small><b>8</b></div>
+    <div><small>Protocol fee</small><b>0</b></div>
+  </div>
+</div>
+
+<section id="vs"><div class="wrap">
+  <div class="head"><h2>A transfer is a confession</h2><p>Every BNB Chain transfer is a permanent public record of who got paid and how much. Murk breaks the link between your wallet and your payments, without a mixer or a pool.</p></div>
+  <table class="vs">
+    <tr><th></th><th>Normal transfer</th><th>Murk</th></tr>
+    <tr><td>Your wallet visible to payers</td><td class="no">Yes, forever</td><td class="yes">No, a handle only</td></tr>
+    <tr><td>Payments linkable to each other</td><td class="no">All on one address</td><td class="yes">Each on its own address</td></tr>
+    <tr><td>Your balance visible to anyone</td><td class="no">Yes</td><td class="yes">Spread over one-time addresses</td></tr>
+    <tr><td>Who holds the money</td><td>You</td><td class="yes">You, keys never leave the browser</td></tr>
+    <tr><td>Fee</td><td>Gas</td><td class="yes">Gas, no protocol fee</td></tr>
+  </table>
+</div></section>
+
+<section id="process"><div class="wrap">
+  <div class="head rev"><p>Three pieces of math, all in the browser. The contract only forwards money and posts a note.</p><h2>Sinking in four steps</h2></div>
+  <div class="tl">
+    <div class="it"><small>1</small><h3>Sign once</h3><p>Your wallet signs a fixed message. A spending key and a viewing key come out of it. Their public halves sit on chain under your handle.</p></div>
+    <div class="it"><small>2</small><h3>New address each time</h3><p>The sender's browser mixes your public keys with fresh randomness and gets an address nobody has used. The money goes there in the same transaction.</p></div>
+    <div class="it"><small>3</small><h3>Only your key sees it</h3><p>Your inbox runs every note through your viewing key. A one-byte tag skips almost every stranger's payment instantly.</p></div>
+    <div class="it"><small>4</small><h3>Surface when you want</h3><p>Each address pays its own gas: stablecoin payments carry 0.00003 BNB for it. Collect to a fresh wallet and nothing points back.</p></div>
+  </div>
+</div></section>
+
+<section id="assets"><div class="wrap">
+  <div class="head"><h2>What sinks</h2><p>BNB plus the stablecoins people actually get paid in on BNB Chain, and a few majors.</p></div>
+  <div class="assets" id="assetGrid"></div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <div class="head"><h2>Questions</h2><p></p></div>
+  <div class="qa">
+    <div><b>Is it a mixer?</b><p>No. There is no pool and no shared balance. Money goes from the sender straight to an address that belongs to the receiver alone.</p></div>
+    <div><b>Who can move the funds?</b><p>Only the receiver, with keys derived from their own wallet signature. The contract has no owner and holds nothing between calls.</p></div>
+    <div><b>What still leaks?</b><p>Amounts and times are public. Someone watching a known payment sees that an address received it, not whose it is.</p></div>
+    <div><b>What does it cost?</b><p>No protocol fee. BNB Chain gas, plus 0.00003 BNB sent along with token payments so the receiver can collect.</p></div>
+    <div><b>Audited?</b><p>No. A small contract, published in the docs. Start with small amounts.</p></div>
+  </div>
+</div></section>
+
+<div class="strip"><div class="wrap"><h2>Get a handle.<br>Disappear.</h2><a class="btn btn-acc" href="/app/#receive">Open Murk</a></div></div>
+</main>
+
+<footer><div class="wrap">
+  <div><a class="brand" href="/"><img src="/icon.png" alt="">Murk</a><p class="note">Stealth payments on BNB Chain. Unaudited software.</p></div>
+  <div class="cols">
+    <div class="col"><b>Product</b><a href="/app/">App</a><a href="/app/#receive">Get a handle</a><a href="/app/#inbox">Inbox</a><a href="/docs">Docs</a></div>
+    <div class="col"><b>Community</b><a href="https://x.com/murkfi" target="_blank" rel="noopener">X</a></div>
+    <div class="col"><b>Token</b><a id="tokLink" href="#">Soon</a></div>
+  </div>
+</div></footer>
+<script src="/config.js"></script>
+<script type="module" src="/landing.js"></script>
+</body>
+</html>

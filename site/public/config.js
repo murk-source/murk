@@ -1,0 +1,25 @@
+// Murk on BNB Smart Chain: chain and the assets you can send privately.
+window.CFG = {
+  app: "murk",
+  title: "Murk",
+  site: "murkfi.xyz",
+  metaPrefix: "bnb",
+  chainId: 56,
+  chainName: "BNB Smart Chain",
+  native: "BNB",
+  rpc: "https://bsc-rpc.publicnode.com",
+  explorer: "https://bscscan.com",
+  nativeMarker: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+  gasTip: "0.00003",
+  logChunk: 1500,
+  tokens: [
+    { symbol: "BNB", logo: "/logos/BNB.png", decimals: 18, color: "#f0b90b" },
+    { symbol: "USDT", logo: "/logos/USDT.png", address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18, color: "#26a17b" },
+    { symbol: "USDC", logo: "/logos/USDC.png", address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18, color: "#2775ca" },
+    { symbol: "USD1", logo: "/logos/USD1.png", address: "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d", decimals: 18, color: "#d8c27a" },
+    { symbol: "FDUSD", logo: "/logos/FDUSD.png", address: "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409", decimals: 18, color: "#9ad1a5" },
+    { symbol: "BTCB", logo: "/logos/BTCB.png", address: "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", decimals: 18, color: "#f7931a" },
+    { symbol: "ETH", logo: "/logos/ETH.png", address: "0x2170Ed0880ac9A755fd29B2688956BD959F933F8", decimals: 18, color: "#8a92b2" },
+    { symbol: "CAKE", logo: "/logos/CAKE.png", address: "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", decimals: 18, color: "#d1884f" },
+  ],
+};
