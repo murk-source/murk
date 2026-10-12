@@ -1,0 +1,16 @@
+# build output and caches
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+contracts/deployments/out.json
+site/.wrangler/
+node_modules/
+
+# local secrets
+.env
+.dev.vars
+
+# brand and post assets (not part of the app)
+brand/
+publish/
